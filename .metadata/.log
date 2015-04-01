@@ -57,3 +57,27 @@ Command-line arguments:  -data /home/teider/tcc/repos/tests -os linux -ws gtk -a
 
 !ENTRY org.eclipse.core.net 1 0 2015-04-01 13:07:25.760
 !MESSAGE System property https.proxyPort is not set but should be 3128.
+!SESSION 2015-04-01 13:29:25.810 -----------------------------------------------
+eclipse.buildId=unknown
+java.version=1.7.0_75
+java.vendor=Oracle Corporation
+BootLoader constants: OS=linux, ARCH=x86_64, WS=gtk, NL=en_US
+Command-line arguments:  -data /home/teider/tcc/repos/tests -os linux -ws gtk -arch x86_64
+
+!ENTRY org.eclipse.core.net 1 0 2015-04-01 13:29:35.351
+!MESSAGE System property http.proxyHost is not set but should be 10.108.64.188.
+
+!ENTRY org.eclipse.core.net 1 0 2015-04-01 13:29:35.360
+!MESSAGE System property http.proxyPort is not set but should be 3128.
+
+!ENTRY org.eclipse.core.net 1 0 2015-04-01 13:29:35.366
+!MESSAGE System property https.proxyHost is not set but should be 10.108.64.188.
+
+!ENTRY org.eclipse.core.net 1 0 2015-04-01 13:29:35.366
+!MESSAGE System property https.proxyPort is not set but should be 3128.
+
+!ENTRY org.eclipse.core.net 1 0 2015-04-01 13:29:35.376
+!MESSAGE System property https.proxyHost is not set but should be 10.108.64.188.
+
+!ENTRY org.eclipse.core.net 1 0 2015-04-01 13:29:35.376
+!MESSAGE System property https.proxyPort is not set but should be 3128.
