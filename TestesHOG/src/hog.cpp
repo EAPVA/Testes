@@ -13,6 +13,8 @@
 
 #define INPUT_PATH "resources/images"
 
+//#define DEBUG
+
 int main(int argc, char **argv) {
 
   std::vector<std::string> image_list = getImagesList(INPUT_PATH);
@@ -23,21 +25,29 @@ int main(int argc, char **argv) {
   for (int i = 0; i < image_list.size(); ++i) {
     std::cout << image_list[i] << std::endl;
     img = cv::imread(image_list[i], CV_LOAD_IMAGE_GRAYSCALE);
+    img.convertTo(img, CV_32FC1);
     out = draw_hog(calc_hog(img));
-    cv::imwrite(image_list[i] + "_hist.png", out);
-    break;
+    cv::imwrite("outputs/" + image_list[i], out);
+    //break;
   }
 }
 
 hog calc_hog(cv::Mat img) {
   hog ret;
 
-  cv::Mat x_mag, y_angle;
+  cv::Mat img_dx(img.rows, img.cols, img.type());
+  cv::Mat img_dy(img.rows, img.cols, img.type());
 
-  cv::Sobel(img, x_mag, -1, 1, 0, 1);
-  cv::Sobel(img, y_angle, -1, 0, 1, 1);
+  cv::Mat img_mag(img.rows, img.cols, img.type());
+  cv::Mat img_angle(img.rows, img.cols, img.type());
 
-  cv::cartToPolar(x_mag, y_angle, x_mag, y_angle, true);
+  cv::Mat dx = (cv::Mat_<float>(3,3) << 0, 0, 0, -1, 0, 1, 0, 0, 0);
+  cv::Mat dy = (cv::Mat_<float>(3,3) << 0, -1, 0, 0, 0, 0, 0, 1, 0);
+
+  cv::filter2D(img, img_dx, -1, dx, cv::Point(-1,-1), 0.0, cv::BORDER_REPLICATE);
+  cv::filter2D(img, img_dy, -1, dy, cv::Point(-1,-1), 0.0, cv::BORDER_REPLICATE);
+
+  cv::cartToPolar(img_dx, img_dy, img_mag, img_angle, true);
 
   float bin_size = 360.0 / HOG_NUMBER_OF_BINS;
 
@@ -46,7 +56,6 @@ hog calc_hog(cv::Mat img) {
   int top_row = 0;
   int bottom_row = (img.rows / HOG_GRID_HEIGHT) - 1;
   int extra_rows = (img.rows % HOG_GRID_HEIGHT);
-
 
   int left_col = 0;
   int right_col = (img.cols / HOG_GRID_WIDTH) - 1;
@@ -69,17 +78,48 @@ hog calc_hog(cv::Mat img) {
 
     for (int j = top_row; j <= bottom_row; ++j) {
       for (int k = left_col; k <= right_col; ++k) {
-        int left_bin = (int)floor(((y_angle.at(j,k) - (bin_size / 2)) / bin_size));
-        if (left_bin < 0) left_bin += hist.bins.size();
-        int right_bin = (left_bin + 1) % hist.bins.size();
+        if (img_mag.at<float>(j,k) > 0) {
+          int left_bin = (int)floor(((img_angle.at<float>(j,k) - (bin_size / 2)) / bin_size));
+          if (left_bin < 0) left_bin += hist.bins.size();
+          int right_bin = (left_bin + 1) % hist.bins.size();
 
-        float delta = (y_angle.at(j,k) / bin_size) - right_bin;
-        if (delta > 0) delta -= hist.bins.size();
+          float delta = (img_angle.at<float>(j,k) / bin_size) - right_bin;
+          if (delta > 1.0) delta -= hist.bins.size();
 
-        hist.bins[left_bin] += (0.5 - delta) * x_mag.at(j,k);
-        hist.bins[right_bin] += (0.5 + delta) * x_mag.at(j,k);
+          hist.bins[left_bin] += (0.5 - delta) * img_mag.at<float>(j,k);
+          hist.bins[right_bin] += (0.5 + delta) * img_mag.at<float>(j,k);
+
+#ifdef DEBUG
+          std::cout << "Processing pixel (" << j << ", " << k << "):" << std::endl;
+          std::cout << "Original value: " << img.at<float>(j,k) << std::endl;
+          std::cout << "dx: " << img_dx.at<float>(j,k) << "   ";
+          std::cout << "dy: " << img_dy.at<float>(j,k) << std::endl;
+          std::cout << "Magnitude: " << img_mag.at<float>(j,k) << "   ";
+          std::cout << "Angle: " << img_angle.at<float>(j,k) << std::endl;
+          std::cout << "Left bin: " << left_bin << "     Right bin: " << right_bin << "   ";
+          std::cout << "Delta: " << delta << std::endl;
+
+          for (int l = 0; l < hist.bins.size(); ++l) {
+            std::cout << "hist[" << l << "]: " << hist.bins[l] << "   ";
+          }
+          std::cout << std::endl;
+          std::cout << std::endl;
+#endif //DEBUG
+        }
       }
     }
+
+    float max_bin = 0.0f;
+
+    for (int i = 0; i < hist.bins.size(); ++i) {
+      if (max_bin < hist.bins[i]) max_bin = hist.bins[i];
+    }
+    for (int i = 0; i < hist.bins.size(); ++i) {
+      hist.bins[i] /= max_bin;
+      std::cout << "hist[" << i << "]: " << hist.bins[i] << "   ";
+    }
+    std::cout << std::endl;
+    std::cout << std::endl;
 
     ret.cells.push_back(hist);
   }
@@ -88,29 +128,33 @@ hog calc_hog(cv::Mat img) {
 }
 
 cv::Mat draw_hog(hog h) {
-  cv::Mat ret(HOG_DRAW_IMAGE_HEIGHT, HOG_DRAW_IMAGE_WIDTH, CV_8UC1);
-
-  float max_abs = 0.0f;
-  for (int i = 0; i < h.cells.size(); ++i) {
-    for (int j = 0; j < h.cells[i].bins.size(); ++j) {
-      if (max_abs < abs(h.cells[i].bins[j])) max_abs = abs(h.cells[i].bins[j]);
-    }
-  }
+  cv::Mat ret(HOG_DRAW_IMAGE_HEIGHT, HOG_DRAW_IMAGE_WIDTH, CV_32F);
 
   int cell_height = ret.rows / h.cells.size();
   int bin_width = ret.cols / HOG_NUMBER_OF_BINS;
-  float pixel_hvalue = (max_abs / (cell_height / 2));
-
+  float pixel_hvalue = (1 / cell_height);
 
   for (int i = 0; i < h.cells.size(); ++i) {
-    int middle_row = cell_height / 2 + i * cell_height;
     for (int j = 0; j < h.cells[i].bins.size(); ++j) {
-      cv::rectangle(ret, cv::Point_<int>(j * bin_width, middle_row),
-                    cv::Point_<int>((j + 1) * bin_width - 1,
-                                    middle_row - (h.cells[i].bins[j]) / pixel_hvalue), 255,
-                                    CV_FILLED);
+      if (h.cells[i].bins[j] > 0) {
+
+      }
     }
   }
-
   return ret;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
