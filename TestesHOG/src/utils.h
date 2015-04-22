@@ -13,6 +13,7 @@
 void cleanOutputDir(const char *dir);
 
 std::vector<std::string> getImagesList(const char *dir);
+std::vector<float> generateLabels(std::vector<std::string> file_list);
 
 
 #endif /* UTILS_H_ */

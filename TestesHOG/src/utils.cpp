@@ -34,3 +34,18 @@ std::vector<std::string> getImagesList(const char *dir_path) {
   }
   return ret;
 }
+
+std::vector<float> generateLabels(std::vector<std::string> file_list) {
+  std::vector<float> ret;
+
+  for(int i = 0; i < file_list.size(); ++i) {
+    //If it isn't negative, it's positive
+    if(file_list[i].find("negative") == std::string::npos) {
+      ret.push_back(1.0);
+    } else {
+      ret.push_back(-1.0);
+    }
+  }
+
+  return ret;
+}

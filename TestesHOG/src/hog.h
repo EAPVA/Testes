@@ -19,12 +19,15 @@ typedef struct histogram {
 
 typedef struct hog {
   std::vector<histogram> cells;
-  //vector<string> bin_labels;
+  float label;
 } hog;
 
-hog calc_hog(cv::Mat img);
+hog calc_hog(cv::Mat img, float label);
 
 cv::Mat draw_hog(hog h);
+
+void generate_train_data(std::vector<hog> inputs, cv::Mat& train_data,
+                         cv::Mat& labels);
 
 
 #endif /* HOG_H_ */
